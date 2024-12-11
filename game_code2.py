@@ -2,7 +2,7 @@ import pygame
 import random
 import math
 from pygame import mixer
-from fsm import FSM
+
 
 # initializing pygame
 pygame.init()
