@@ -1,0 +1,2 @@
+Load all files into same directory for graphics and audio to load -and prevent error-.
+after laoding all files run main.py only.
