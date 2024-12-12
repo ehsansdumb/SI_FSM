@@ -23,6 +23,11 @@ scoreX = 5  # X-coordinate for score display
 scoreY = 5  # Y-coordinate for score display
 font = pygame.font.Font('freesansbold.ttf', 20)  # Font for score
 
+# Lives variables
+lives = 3  # Player's lives
+livesX = 700  # X-coordinate for lives display
+livesY = 5  # Y-coordinate for lives display
+
 # Game Over font
 game_over_font = pygame.font.Font('freesansbold.ttf', 64)
 
@@ -30,6 +35,11 @@ def show_score(x, y):
     """Displays the player's current score on the screen."""
     score = font.render("Points: " + str(score_val), True, (255, 255, 255))
     screen.blit(score, (x, y))
+
+def show_lives(x, y):
+    """Displays the player's remaining lives on the screen."""
+    lives_text = font.render("Lives: " + str(lives), True, (255, 255, 255))
+    screen.blit(lives_text, (x, y))
 
 def game_over():
     """Displays the 'GAME OVER' message when the player loses."""
@@ -57,14 +67,15 @@ invader_bullets = []  # List to store bullets fired by invaders
 invader_fire_timers = []  # Cooldown timers for invader bullets
 no_of_invaders = 8  # Number of invaders
 invaders_shooting = 0  # Number of invaders allowed to shoot initially
+last_speed_increase_score = 0  # Tracks the last score threshold for speed increase
 
 # Initialize invaders
 for num in range(no_of_invaders):
     invaderImage.append(pygame.transform.scale(pygame.image.load('alien.png'), (40, 40)))
     invader_X.append(random.randint(64, 737))  # Random initial X position
     invader_Y.append(random.randint(30, 180))  # Random initial Y position
-    invader_Xchange.append(0.5)  # Initial horizontal speed
-    invader_Ychange.append(30)  # Vertical shift on boundary hit
+    invader_Xchange.append(0.6)  # Initial horizontal speed
+    invader_Ychange.append(50)  # Vertical shift on boundary hit
     invaderFSM.append(FSM("Patrolling"))  # Start invaders in "Patrolling" state
     invader_bullets.append({"x": 0, "y": 0, "state": "rest"})  # Initialize invader bullet state
     invader_fire_timers.append(0)  # Initialize cooldown timers for firing
@@ -79,7 +90,7 @@ bullet_state = "rest"  # Initial state of the bullet ("rest" or "fire")
 
 # Invader bullet setup
 invader_bullet_image = pygame.transform.scale(pygame.image.load('enemy_bullet.png'), (10, 20))  # Load and scale invader bullet sprite
-invader_bullet_speed = 0.4  # Slower speed for invader bullets
+invader_bullet_speed = 0.1  # Initial speed for invader bullets
 
 # Collision detection
 def isCollision(x1, x2, y1, y2):
@@ -151,12 +162,17 @@ while running:
         # Check if invader reaches the player
         if invader_Y[i] >= 450:
             if abs(player_X - invader_X[i]) < 80:
-                for j in range(no_of_invaders):
-                    invader_Y[j] = 2000  # Move all invaders off-screen
-                    explosion_sound = mixer.Sound('explosion.wav')
-                    explosion_sound.play()
-                game_over()
-                break
+                lives -= 1
+                invader_Y[i] = random.randint(30, 200)
+                invader_X[i] = random.randint(64, 736)
+                if lives == 0:
+                    for j in range(no_of_invaders):
+                        invader_Y[j] = 2000  # Move all invaders off-screen
+                        explosion_sound = mixer.Sound('explosion.wav')
+                        explosion_sound.play()
+                    game_over()
+                    running = False
+                    break
 
         # Handle FSM states for each invader
         if invaderFSM[i].state == "Patrolling":
@@ -174,6 +190,9 @@ while running:
                 invader_bullets[i]["y"] = invader_Y[i]
                 invader_bullets[i]["state"] = "fire"
                 invader_fire_timers[i] = 100  # Set cooldown timer
+                # Adjust accuracy if near player
+                if abs(player_X - invader_X[i]) < 120:  # Increase accuracy if near player
+                    invader_bullets[i]["x"] = player_X
             if random.random() < 0.1:  # Random chance to return to patrolling
                 invaderFSM[i].change_state("Patrolling")
 
@@ -203,20 +222,29 @@ while running:
 
         # Check if invader bullet hits the player
         if invader_bullets[i]["state"] == "fire" and isCollision(invader_bullets[i]["x"], player_X, invader_bullets[i]["y"], player_Y):
-            for j in range(no_of_invaders):
-                invader_Y[j] = 2000  # Move all invaders off-screen
-            explosion_sound = mixer.Sound('explosion.wav')
-            explosion_sound.play()
-            game_over()
-            running = False
+            lives -= 1
+            invader_bullets[i]["state"] = "rest"
+            if lives == 0:
+                for j in range(no_of_invaders):
+                    invader_Y[j] = 2000  # Move all invaders off-screen
+                explosion_sound = mixer.Sound('explosion.wav')
+                explosion_sound.play()
+                game_over()
+                running = False
 
     # Gradually increase the number of shooting invaders based on score
-    if score_val >= invaders_shooting * 10:  # Increase every 10 points
+    if score_val >= invaders_shooting * 20:  # Increase every 10 points
         invaders_shooting = min(invaders_shooting + 1, no_of_invaders)
 
-    # Draw the player and score
+    # Increase bullet speed every 20 points
+    if score_val - last_speed_increase_score >= 20:
+        invader_bullet_speed += 0.2
+        last_speed_increase_score = score_val
+
+        # Draw the player and score
     player(player_X, player_Y)
     show_score(scoreX, scoreY)
+    show_lives(livesX, livesY)
 
     # Update the display
     pygame.display.update()
