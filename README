@@ -1,2 +1,2 @@
 Load all files into same directory for graphics and audio to load -and prevent error- or path it properly.
-game_code.py and fsm.py are the 2 main files we are working on to add FSM functionality to the space invaders-like game(game_code2.py).
+game_w_AI.py and fsm.py are the 2 main files we are working on to add FSM functionality to the space invaders-like game(og_game_code.py).
